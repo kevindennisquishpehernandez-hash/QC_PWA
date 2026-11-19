@@ -12,6 +12,10 @@ app.use(express.json());
 const clienteRoutes = require('./src/routes/clienteRoutes');
 app.use('/api/clientes', clienteRoutes);
 
+// Importar rutas de cálculo estructural (EP-02 / HU-02-01)
+const estructuraRoutes = require('./src/routes/estructuraRoutes');
+app.use('/api/estructuras', estructuraRoutes);
+
 app.get('/', (req, res) => {
     res.json({ mensaje: '¡Backend de Quishpe Constructores conectado a Supabase! 🚀' });
 });

@@ -14,8 +14,29 @@ const clienteController = {
     crearCliente: async (req, res) => {
         try {
             const { nombres, empresa, telefono, direccion, ruc, email } = req.body;
-            const nuevoCliente = await clienteModel.crear(nombres, empresa, telefono, direccion, ruc, email);
-            res.status(201).json({ estado: 'success', mensaje: 'Cliente creado con éxito', datos: nuevoCliente });
+
+            // Validación básica de entrada (HTTP 400 si faltan datos obligatorios)
+            if (!nombres || !nombres.trim()) {
+                return res.status(400).json({
+                    estado: 'error',
+                    mensaje: 'El campo "nombres" es obligatorio.'
+                });
+            }
+
+            const nuevoCliente = await clienteModel.crear(
+                nombres.trim(),
+                empresa?.trim() || null,
+                telefono?.trim() || null,
+                direccion?.trim() || null,
+                ruc?.trim() || null,
+                email?.trim() || null
+            );
+
+            res.status(201).json({
+                estado: 'success',
+                mensaje: 'Cliente creado con éxito',
+                datos: nuevoCliente
+            });
         } catch (error) {
             console.error('Error al crear cliente:', error);
             res.status(500).json({ estado: 'error', mensaje: error.message });
