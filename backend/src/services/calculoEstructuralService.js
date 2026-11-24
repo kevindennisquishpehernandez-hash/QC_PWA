@@ -45,22 +45,25 @@ const DEFAULTS = {
   especBaseInterna: '2.5" x 2.0 mm'
 };
 
+const FACTOR_LARGO_ARCO = 1.19; // 1.19 m de tubo por cada metro lineal de ancho de cercha
+const FACTOR_ALTO_CENTRO = 0.2734; // Relación geométrica h/W del arco circular cuando L/W = 1.19
+
 /**
- * Calcula la longitud exacta del tubo para un arco circular asentado en el piso,
- * a partir del ancho total de la cercha (W) y el alto en el punto medio (h).
+ * Calcula el largo del tubo para el arco multiplicando el ancho de la cercha por 1.19
  */
-function calcularLargoArco(anchoArco, altoMedioArco) {
+function calcularLargoArco(anchoArco) {
   const W = Number(anchoArco);
-  const h = Number(altoMedioArco);
-
   if (!Number.isFinite(W) || W <= 0) return 0;
-  if (!Number.isFinite(h) || h <= 0) return Number(W.toFixed(2));
+  return Number((W * FACTOR_LARGO_ARCO).toFixed(2));
+}
 
-  const radio = h / 2 + (W * W) / (8 * h);
-  const angulo = 4 * Math.atan((2 * h) / W);
-  const longitudArco = radio * angulo;
-
-  return Number(longitudArco.toFixed(2));
+/**
+ * Calcula automáticamente la altura en el centro (punto medio) del arco asentado en el piso
+ */
+function calcularAltoCentroArco(anchoArco) {
+  const W = Number(anchoArco);
+  if (!Number.isFinite(W) || W <= 0) return 0;
+  return Number((W * FACTOR_ALTO_CENTRO).toFixed(2));
 }
 
 /**
@@ -364,37 +367,40 @@ function calcularEstructuraInvernadero(params) {
     Array.isArray(config.tiposCercha) && config.tiposCercha.length > 0
       ? config.tiposCercha
       : [
-          {
-            id: 'A',
-            nombre: 'Cercha Estándar',
-            ancho: Number(config.anchoArco),
-            altoMedio: Number(config.altoMedioArco),
-            largoAleta: Number(config.largoAleta),
-            largoPerico: Number(config.largoPerico),
-            esDefault: true,
-            naves: []
-          }
-        ];
+        {
+          id: 'A',
+          nombre: 'Cercha Estándar',
+          ancho: Number(config.anchoArco),
+          altoMedio: Number(config.altoMedioArco),
+          largoAleta: Number(config.largoAleta),
+          largoPerico: Number(config.largoPerico),
+          esDefault: true,
+          naves: []
+        }
+      ];
 
-  const tiposNormalizados = tiposCerchaEntrada.map((t, idx) => ({
-    id: t.id || String.fromCharCode(65 + idx),
-    nombre:
-      t.nombre ||
-      (idx === 0 ? 'Cercha Estándar' : `Cercha Tipo ${String.fromCharCode(65 + idx)}`),
-    ancho: Number(t.ancho) || Number(config.anchoArco),
-    altoMedio: Number(t.altoMedio) || Number(config.altoMedioArco),
-    largoAleta:
-      t.largoAleta !== undefined && t.largoAleta !== ''
-        ? Number(t.largoAleta)
-        : Number(config.largoAleta),
-    largoPerico:
-      t.largoPerico !== undefined && t.largoPerico !== ''
-        ? Number(t.largoPerico)
-        : Number(config.largoPerico),
-    largoArco: calcularLargoArco(t.ancho || config.anchoArco, t.altoMedio || config.altoMedioArco),
-    esDefault: idx === 0 || Boolean(t.esDefault),
-    navesAsignadas: Array.isArray(t.naves) ? t.naves.map(Number) : []
-  }));
+  const tiposNormalizados = tiposCerchaEntrada.map((t, idx) => {
+    const anchoVal = Number(t.ancho) || Number(config.anchoArco);
+    return {
+      id: t.id || String.fromCharCode(65 + idx),
+      nombre:
+        t.nombre ||
+        (idx === 0 ? 'Cercha Estándar' : `Cercha Tipo ${String.fromCharCode(65 + idx)}`),
+      ancho: anchoVal,
+      altoMedio: calcularAltoCentroArco(anchoVal),
+      largoAleta:
+        t.largoAleta !== undefined && t.largoAleta !== ''
+          ? Number(t.largoAleta)
+          : Number(config.largoAleta),
+      largoPerico:
+        t.largoPerico !== undefined && t.largoPerico !== ''
+          ? Number(t.largoPerico)
+          : Number(config.largoPerico),
+      largoArco: calcularLargoArco(anchoVal),
+      esDefault: idx === 0 || Boolean(t.esDefault),
+      navesAsignadas: Array.isArray(t.naves) ? t.naves.map(Number) : []
+    };
+  });
 
   const tipoDefault = tiposNormalizados.find((t) => t.esDefault) || tiposNormalizados[0];
 
@@ -626,6 +632,18 @@ function calcularEstructuraInvernadero(params) {
       });
     }
   });
+
+  // 6.5.1 Posición 8: 1 tubo de 8.00 m (2.5" x 2.0 mm) por cada cercha perimetral
+  if (cerchasPerimetrales > 0) {
+    ordenCompra.push({
+      categoria: 'Posiciones 8 ',
+      cantidad: cerchasPerimetrales,
+      unidad: 'tubos de 8.00 m',
+      medidaExacta: '8.00 m',
+      especificacion: '2.5" x 2.0 mm',
+      destino: `Para posición 8 (1 por cada cercha perimetral · ${cerchasPerimetrales} cerchas perimetrales)`
+    });
+  }
 
   // 6.6 Elementos comprados en tubos comerciales (Apoyos de Pie de Amigo, Carevacas, Cachos, Flautines, Aletas, Pericos)
   hojaCorte.forEach((corte) => {

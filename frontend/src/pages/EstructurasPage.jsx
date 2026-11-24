@@ -24,15 +24,18 @@ function crearMatriz(filas, cols, valorInicial = true) {
   return Array.from({ length: filas }, () => Array(cols).fill(valorInicial));
 }
 
-// Calcula el largo exacto del tubo de un arco circular asentado en el piso
-function calcularLargoArcoLocal(ancho, altoMedio) {
+// Calcula el largo del tubo del arco usando el factor de taller (1.19 por metro lineal de ancho)
+function calcularLargoArcoLocal(ancho) {
   const W = Number(ancho);
-  const h = Number(altoMedio);
   if (!Number.isFinite(W) || W <= 0) return 0;
-  if (!Number.isFinite(h) || h <= 0) return Number(W.toFixed(2));
-  const radio = h / 2 + (W * W) / (8 * h);
-  const angulo = 4 * Math.atan((2 * h) / W);
-  return Number((radio * angulo).toFixed(2));
+  return Number((W * 1.19).toFixed(2));
+}
+
+// Calcula automáticamente la altura en el centro (punto medio) del arco asentado en el piso
+function calcularAltoCentroArcoLocal(ancho) {
+  const W = Number(ancho);
+  if (!Number.isFinite(W) || W <= 0) return 0;
+  return Number((W * 0.2734).toFixed(2));
 }
 
 function EstructurasPage() {
@@ -558,7 +561,8 @@ function EstructurasPage() {
 
             <div className="space-y-3">
               {tiposCercha.map((cercha) => {
-                const largoCalculado = calcularLargoArcoLocal(cercha.ancho, cercha.altoMedio);
+                const largoCalculado = calcularLargoArcoLocal(cercha.ancho);
+                const altoCentroCalculado = calcularAltoCentroArcoLocal(cercha.ancho);
                 return (
                   <div
                     key={cercha.id}
@@ -595,10 +599,10 @@ function EstructurasPage() {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-3 gap-2.5">
                       <div>
                         <label className="mb-1 block text-[11px] font-semibold text-slate-600">
-                          Ancho de Cercha (m)
+                          Ancho (m)
                         </label>
                         <input
                           type="number"
@@ -611,22 +615,7 @@ function EstructurasPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-[11px] font-semibold text-slate-600">
-                          Alto Punto Medio (m)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.05"
-                          min="0.1"
-                          value={cercha.altoMedio}
-                          onChange={(e) =>
-                            actualizarTipoCercha(cercha.id, 'altoMedio', e.target.value)
-                          }
-                          className="w-full rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-1.5 text-sm font-semibold text-slate-900 focus:border-emerald-500 focus:bg-white focus:outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="mb-1 block text-[11px] font-semibold text-slate-600">
-                          Largo de Aleta (m)
+                          Aleta (m)
                         </label>
                         <input
                           type="number"
@@ -641,7 +630,7 @@ function EstructurasPage() {
                       </div>
                       <div>
                         <label className="mb-1 block text-[11px] font-semibold text-slate-600">
-                          Largo de Perico (m)
+                          Perico (m)
                         </label>
                         <input
                           type="number"
@@ -656,15 +645,23 @@ function EstructurasPage() {
                       </div>
                     </div>
 
-                    {/* Indicador en vivo del largo exacto del tubo de arco */}
-                    <div className="mt-2.5 flex items-center justify-between rounded-lg bg-slate-900 px-3 py-2 text-xs text-white">
-                      <span className="flex items-center gap-1.5 text-slate-300">
-                        <Ruler className="h-3.5 w-3.5 text-emerald-400" />
-                        Largo de tubo para arco:
-                      </span>
-                      <span className="font-mono text-sm font-bold text-emerald-400 tabular-nums">
-                        {largoCalculado.toFixed(2)} m
-                      </span>
+                    {/* Indicadores en vivo: Largo del tubo (x1.19) y Altura en el centro */}
+                    <div className="mt-2.5 grid grid-cols-2 gap-2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white">
+                      <div className="flex items-center justify-between border-r border-slate-700/80 pr-2.5">
+                        <span className="flex items-center gap-1 text-slate-300">
+                          <Ruler className="h-3.5 w-3.5 text-emerald-400" />
+                          Tubo (×1.19):
+                        </span>
+                        <span className="font-mono text-sm font-bold text-emerald-400 tabular-nums">
+                          {largoCalculado.toFixed(2)} m
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between pl-0.5">
+                        <span className="text-slate-300">Alto centro:</span>
+                        <span className="font-mono text-sm font-bold text-sky-400 tabular-nums">
+                          {altoCentroCalculado.toFixed(2)} m
+                        </span>
+                      </div>
                     </div>
 
                     {/* Selector de naves para cerchas adicionales */}
